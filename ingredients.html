@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmful Ingredients Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .ingredient {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #f0f0f0;
+    }
+    .harmful {
+      color: red;
+      font-weight: bold;
+    }
+    .safe {
+      color: green;
+      font-weight: bold;
+    }
+    .alternative {
+      margin-top: 5px;
+      color: blue;
+    }
+    #scanner {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Harmful Ingredients Tracker</h1>
+
+  <h2>Search Food</h2>
+  <input type="text" id="foodName" placeholder="Enter food name">
+  <button onclick="searchFood()">Search</button>
+
+  <h2>Scan Barcode</h2>
+  <div id="scanner"></div>
+  <button onclick="startScanner()">Start Scanner</button>
+
+  <h2>Ingredient Details</h2>
+  <div id="ingredientList"></div>
+
+  <h2>Your Intake Tracker</h2>
+  <div>
+    <p>Total harmful ingredients consumed: <span id="intakeCount">0</span></p>
+  </div>
+</div>
+
+<!-- QuaggaJS CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script>
+const foodDB = {
+  "chocolate bar": ["Sugar", "Cocoa", "Soy Lecithin", "BHA"],
+  "soda": ["Carbonated Water", "High Fructose Corn Syrup", "Caffeine", "Artificial Color Red 40"],
+  "bread": ["Flour", "Water", "Yeast", "Sodium Propionate"]
+};
+
+const harmfulIngredients = {
+  "BHA": { reason: "May be carcinogenic in large amounts", alternative: "Natural preservatives like Vitamin E" },
+  "Artificial Color Red 40": { reason: "Linked to hyperactivity in children", alternative: "Natural coloring like beet juice" },
+  "Sodium Propionate": { reason: "May affect gut health", alternative: "Vinegar or natural fermentation" },
+  "High Fructose Corn Syrup": { reason: "Linked to obesity and diabetes", alternative: "Honey or pure cane sugar" }
+};
+
+const barcodeDB = {
+  "12345": "chocolate bar",
+  "23456": "soda",
+  "34567": "bread"
+};
+
+let intakeCounter = 0;
+
+function searchFood() {
+  const name = document.getElementById("foodName").value.toLowerCase();
+  displayIngredients(foodDB[name]);
+}
+
+function displayIngredients(ingredients) {
+  const container = document.getElementById("ingredientList");
+  container.innerHTML = "";
+  if (!ingredients) {
+    container.innerHTML = "<p>Food not found.</p>";
+    return;
+  }
+
+  ingredients.forEach(ing => {
+    const div = document.createElement("div");
+    div.className = "ingredient";
+
+    if (harmfulIngredients[ing]) {
+      intakeCounter++;
+      div.innerHTML = `${ing} - <span class="harmful">Harmful!</span> <br>
+                       Reason: ${harmfulIngredients[ing].reason} <br>
+                       <span class="alternative">Safer alternative: ${harmfulIngredients[ing].alternative}</span>`;
+    } else {
+      div.innerHTML = `${ing} - <span class="safe">Safe</span>`;
+    }
+
+    container.appendChild(div);
+  });
+
+  document.getElementById("intakeCount").textContent = intakeCounter;
+}
+
+// Start QuaggaJS scanner
+function startScanner() {
+  Quagga.init({
+    inputStream: {
+      name: "Live",
+      type: "LiveStream",
+      target: document.querySelector('#scanner'),
+      constraints: {
+        facingMode: "environment"
+      }
+    },
+    decoder: {
+      readers: ["ean_reader", "upc_reader", "code_128_reader"]
+    }
+  }, function(err) {
+    if (err) {
+      console.error(err);
+      alert("Error initializing scanner: " + err);
+      return;
+    }
+    Quagga.start();
+  });
+
+  Quagga.onDetected(data => {
+    const code = data.codeResult.code;
+    Quagga.stop();
+    const foodName = barcodeDB[code];
+    displayIngredients(foodDB[foodName]);
+  });
+}
+</script>
+</body>
+</html>
